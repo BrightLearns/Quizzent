@@ -20,21 +20,37 @@ export default function App() {
   const clickSound = useRef(null);
   
   useEffect(() => {
-    // Initialize sounds with simple beep tones
-    const audioContext = typeof AudioContext !== 'undefined' ? new AudioContext() : null;
-    
-    const createBeep = (frequency, duration) => {
-      if (!audioContext) return null;
-      const audio = document.createElement('audio');
-      audio.src = `data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=`;
-      return audio;
+    // Create simple sound effects using Web Audio API
+    const createSound = (frequency, duration, type = 'sine') => {
+      return () => {
+        if (!soundEnabled) return;
+        try {
+          const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          
+          oscillator.frequency.value = frequency;
+          oscillator.type = type;
+          
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+          
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + duration);
+        } catch (e) {
+          console.log('Audio not supported');
+        }
+      };
     };
     
-    correctSound.current = createBeep(800, 0.2);
-    wrongSound.current = createBeep(200, 0.3);
-    tickSound.current = createBeep(600, 0.1);
-    clickSound.current = createBeep(400, 0.05);
-  }, []);
+    correctSound.current = createSound(800, 0.2, 'sine');
+    wrongSound.current = createSound(200, 0.3, 'sawtooth');
+    tickSound.current = createSound(600, 0.1, 'square');
+    clickSound.current = createSound(400, 0.05, 'sine');
+  }, [soundEnabled]);
 
   // Current affairs questions for 2025-2026
   const questions = {
@@ -202,10 +218,9 @@ export default function App() {
     hard: 60
   };
 
-  const playSound = (sound) => {
-    if (soundEnabled && sound && sound.current) {
-      sound.current.currentTime = 0;
-      sound.current.play().catch(() => {});
+  const playSound = (soundFunc) => {
+    if (soundEnabled && soundFunc && soundFunc.current) {
+      soundFunc.current();
     }
   };
 
@@ -299,10 +314,10 @@ export default function App() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-purple-900 flex items-center justify-center p-4">
         <div className="text-center max-w-2xl w-full">
-          <h1 className="text-6xl sm:text-8xl font-black text-yellow-400 mb-4 animate-bounce" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif', textShadow: '4px 4px 0px rgba(0,0,0,0.3)'}}>
+          <h1 className="text-7xl sm:text-8xl md:text-9xl font-black text-yellow-400 mb-6 animate-bounce leading-tight" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif', textShadow: '4px 4px 0px rgba(0,0,0,0.3)'}}>
             QUIZZENT! 🧠
           </h1>
-          <p className="text-xl sm:text-2xl text-yellow-300 mb-12" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}>
+          <p className="text-2xl sm:text-3xl md:text-4xl text-yellow-300 mb-12 px-4" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}>
             Test Your Current Affairs Knowledge!
           </p>
           
@@ -312,10 +327,10 @@ export default function App() {
                 playSound(clickSound);
                 setGameState('settings');
               }}
-              className="group w-full max-w-md mx-auto bg-yellow-400 hover:bg-yellow-500 text-purple-900 font-black py-6 px-8 rounded-3xl text-2xl sm:text-3xl transform hover:scale-105 transition-all duration-200 shadow-2xl hover:shadow-yellow-400/50 flex items-center justify-center gap-3"
+              className="group w-full max-w-md mx-auto bg-yellow-400 hover:bg-yellow-500 text-purple-900 font-black py-8 px-8 rounded-3xl text-3xl sm:text-4xl transform hover:scale-105 transition-all duration-200 shadow-2xl hover:shadow-yellow-400/50 flex items-center justify-center gap-3"
               style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}
             >
-              <Zap className="w-8 h-8" />
+              <Zap className="w-10 h-10" />
               START QUIZ! 🚀
             </button>
 
@@ -324,10 +339,10 @@ export default function App() {
                 playSound(clickSound);
                 setSoundEnabled(!soundEnabled);
               }}
-              className="group w-full max-w-md mx-auto bg-purple-500 hover:bg-purple-600 text-yellow-300 font-black py-4 px-8 rounded-3xl text-xl sm:text-2xl transform hover:scale-105 transition-all duration-200 shadow-2xl flex items-center justify-center gap-3"
+              className="group w-full max-w-md mx-auto bg-purple-500 hover:bg-purple-600 text-yellow-300 font-black py-6 px-8 rounded-3xl text-2xl sm:text-3xl transform hover:scale-105 transition-all duration-200 shadow-2xl flex items-center justify-center gap-3"
               style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}
             >
-              {soundEnabled ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
+              {soundEnabled ? <Volume2 className="w-8 h-8" /> : <VolumeX className="w-8 h-8" />}
               Sound: {soundEnabled ? 'ON' : 'OFF'}
             </button>
           </div>
@@ -341,14 +356,14 @@ export default function App() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-purple-900 flex items-center justify-center p-4">
         <div className="text-center max-w-2xl w-full">
-          <h1 className="text-5xl sm:text-7xl font-black text-yellow-400 mb-8" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif', textShadow: '4px 4px 0px rgba(0,0,0,0.3)'}}>
+          <h1 className="text-6xl sm:text-7xl md:text-8xl font-black text-yellow-400 mb-8" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif', textShadow: '4px 4px 0px rgba(0,0,0,0.3)'}}>
             CHOOSE YOUR CHALLENGE! 💪
           </h1>
 
           {/* Question Count Selection */}
           <div className="mb-12 bg-white/10 backdrop-blur-sm rounded-3xl p-6">
-            <h2 className="text-2xl sm:text-3xl font-black text-yellow-300 mb-6" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}>
-              <List className="inline w-8 h-8 mb-1" /> Number of Questions
+            <h2 className="text-3xl sm:text-4xl font-black text-yellow-300 mb-6" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}>
+              <List className="inline w-10 h-10 mb-1" /> Number of Questions
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[5, 8, 10, 15].map(count => (
@@ -358,7 +373,7 @@ export default function App() {
                     playSound(clickSound);
                     setQuestionCount(count);
                   }}
-                  className={`${questionCount === count ? 'bg-yellow-400 scale-110' : 'bg-yellow-400/50'} hover:bg-yellow-400 text-purple-900 font-black py-4 px-6 rounded-2xl text-2xl sm:text-3xl transform hover:scale-110 transition-all duration-200 shadow-xl`}
+                  className={`${questionCount === count ? 'bg-yellow-400 scale-110' : 'bg-yellow-400/50'} hover:bg-yellow-400 text-purple-900 font-black py-6 px-6 rounded-2xl text-4xl sm:text-5xl transform hover:scale-110 transition-all duration-200 shadow-xl`}
                   style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}
                 >
                   {count}
@@ -368,43 +383,43 @@ export default function App() {
           </div>
 
           {/* Difficulty Selection */}
-          <h2 className="text-2xl sm:text-3xl font-black text-yellow-300 mb-6" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}>
-            <Brain className="inline w-8 h-8 mb-1" /> Select Difficulty
+          <h2 className="text-3xl sm:text-4xl font-black text-yellow-300 mb-6" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}>
+            <Brain className="inline w-10 h-10 mb-1" /> Select Difficulty
           </h2>
           <div className="space-y-6 px-4">
             <button
               onClick={() => startGame('easy')}
-              className="group w-full max-w-md mx-auto bg-yellow-400 hover:bg-yellow-500 text-purple-900 font-black py-6 px-8 rounded-3xl text-2xl sm:text-3xl transform hover:scale-110 transition-all duration-200 shadow-2xl hover:shadow-yellow-400/50"
+              className="group w-full max-w-md mx-auto bg-yellow-400 hover:bg-yellow-500 text-purple-900 font-black py-8 px-8 rounded-3xl text-3xl sm:text-4xl transform hover:scale-110 transition-all duration-200 shadow-2xl hover:shadow-yellow-400/50"
               style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}
             >
               <div className="flex items-center justify-center gap-3 flex-wrap">
-                <Zap className="w-6 h-6 sm:w-8 sm:h-8" />
+                <Zap className="w-8 h-8 sm:w-10 sm:h-10" />
                 EASY MODE
-                <span className="text-base sm:text-lg">(30s per Q)</span>
+                <span className="text-xl sm:text-2xl">(30s per Q)</span>
               </div>
             </button>
             
             <button
               onClick={() => startGame('medium')}
-              className="group w-full max-w-md mx-auto bg-yellow-400 hover:bg-yellow-500 text-purple-900 font-black py-6 px-8 rounded-3xl text-2xl sm:text-3xl transform hover:scale-110 transition-all duration-200 shadow-2xl hover:shadow-yellow-400/50"
+              className="group w-full max-w-md mx-auto bg-yellow-400 hover:bg-yellow-500 text-purple-900 font-black py-8 px-8 rounded-3xl text-3xl sm:text-4xl transform hover:scale-110 transition-all duration-200 shadow-2xl hover:shadow-yellow-400/50"
               style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}
             >
               <div className="flex items-center justify-center gap-3 flex-wrap">
-                <Brain className="w-6 h-6 sm:w-8 sm:h-8" />
+                <Brain className="w-8 h-8 sm:w-10 sm:h-10" />
                 MEDIUM MODE
-                <span className="text-base sm:text-lg">(45s per Q)</span>
+                <span className="text-xl sm:text-2xl">(45s per Q)</span>
               </div>
             </button>
             
             <button
               onClick={() => startGame('hard')}
-              className="group w-full max-w-md mx-auto bg-yellow-400 hover:bg-yellow-500 text-purple-900 font-black py-6 px-8 rounded-3xl text-2xl sm:text-3xl transform hover:scale-110 transition-all duration-200 shadow-2xl hover:shadow-yellow-400/50"
+              className="group w-full max-w-md mx-auto bg-yellow-400 hover:bg-yellow-500 text-purple-900 font-black py-8 px-8 rounded-3xl text-3xl sm:text-4xl transform hover:scale-110 transition-all duration-200 shadow-2xl hover:shadow-yellow-400/50"
               style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}
             >
               <div className="flex items-center justify-center gap-3 flex-wrap">
-                <Rocket className="w-6 h-6 sm:w-8 sm:h-8" />
+                <Rocket className="w-8 h-8 sm:w-10 sm:h-10" />
                 HARD MODE
-                <span className="text-base sm:text-lg">(60s per Q)</span>
+                <span className="text-xl sm:text-2xl">(60s per Q)</span>
               </div>
             </button>
 
@@ -413,7 +428,7 @@ export default function App() {
                 playSound(clickSound);
                 setGameState('menu');
               }}
-              className="group w-full max-w-md mx-auto bg-purple-500 hover:bg-purple-600 text-yellow-300 font-black py-4 px-8 rounded-3xl text-xl sm:text-2xl transform hover:scale-105 transition-all duration-200 shadow-2xl"
+              className="group w-full max-w-md mx-auto bg-purple-500 hover:bg-purple-600 text-yellow-300 font-black py-6 px-8 rounded-3xl text-2xl sm:text-3xl transform hover:scale-105 transition-all duration-200 shadow-2xl"
               style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}
             >
               ← BACK
@@ -435,14 +450,14 @@ export default function App() {
           {/* Header */}
           <div className="bg-yellow-400 rounded-3xl p-4 sm:p-6 mb-4 sm:mb-8 shadow-2xl">
             <div className="flex justify-between items-center flex-wrap gap-3">
-              <div className="text-purple-900 font-black text-lg sm:text-2xl" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}>
+              <div className="text-purple-900 font-black text-2xl sm:text-3xl" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}>
                 Q {currentQuestion + 1}/{totalQuestions}
               </div>
-              <div className="text-purple-900 font-black text-lg sm:text-2xl" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}>
+              <div className="text-purple-900 font-black text-2xl sm:text-3xl" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}>
                 Score: {score} 🏆
               </div>
-              <div className={`flex items-center gap-2 text-purple-900 font-black text-2xl sm:text-3xl ${timeLeft <= 10 ? 'animate-pulse text-red-600' : ''}`} style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}>
-                <Clock className="w-6 h-6 sm:w-8 sm:h-8" />
+              <div className={`flex items-center gap-2 text-purple-900 font-black text-3xl sm:text-4xl ${timeLeft <= 10 ? 'animate-pulse text-red-600' : ''}`} style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}>
+                <Clock className="w-8 h-8 sm:w-10 sm:h-10" />
                 {timeLeft}s
               </div>
             </div>
@@ -450,7 +465,7 @@ export default function App() {
 
           {/* Question */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 mb-4 sm:mb-8 shadow-2xl transform hover:scale-105 transition-transform">
-            <h2 className="text-xl sm:text-3xl font-black text-purple-900 text-center" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-black text-purple-900 text-center leading-tight" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}>
               {current.q}
             </h2>
           </div>
@@ -462,7 +477,7 @@ export default function App() {
                 key={index}
                 onClick={() => handleAnswer(index)}
                 disabled={answered}
-                className={`${getButtonStyle(index)} text-purple-900 font-black py-4 sm:py-6 px-4 sm:px-8 rounded-3xl text-lg sm:text-2xl transform transition-all duration-200 shadow-2xl disabled:cursor-not-allowed break-words`}
+                className={`${getButtonStyle(index)} text-purple-900 font-black py-6 sm:py-8 px-4 sm:px-8 rounded-3xl text-2xl sm:text-3xl transform transition-all duration-200 shadow-2xl disabled:cursor-not-allowed break-words`}
                 style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}
               >
                 {option}
@@ -491,19 +506,19 @@ export default function App() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-600 via-purple-700 to-purple-900 flex items-center justify-center p-4">
         <div className="text-center max-w-2xl w-full">
-          <Trophy className="w-24 h-24 sm:w-32 sm:h-32 text-yellow-400 mx-auto mb-8 animate-bounce" />
-          <h1 className="text-5xl sm:text-7xl font-black text-yellow-400 mb-4" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif', textShadow: '4px 4px 0px rgba(0,0,0,0.3)'}}>
+          <Trophy className="w-28 h-28 sm:w-32 sm:h-32 text-yellow-400 mx-auto mb-8 animate-bounce" />
+          <h1 className="text-6xl sm:text-7xl md:text-8xl font-black text-yellow-400 mb-6 leading-tight" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif', textShadow: '4px 4px 0px rgba(0,0,0,0.3)'}}>
             QUIZ COMPLETE!
           </h1>
           
-          <div className="bg-white rounded-3xl p-8 sm:p-12 mb-8 shadow-2xl">
-            <div className="text-5xl sm:text-6xl font-black text-purple-900 mb-4" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}>
+          <div className="bg-white rounded-3xl p-10 sm:p-12 mb-8 shadow-2xl">
+            <div className="text-6xl sm:text-7xl font-black text-purple-900 mb-4" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}>
               {score}/{totalQuestions}
             </div>
-            <div className="text-3xl sm:text-4xl font-black text-purple-700 mb-4" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}>
+            <div className="text-4xl sm:text-5xl font-black text-purple-700 mb-4" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}>
               {percentage}% 🎯
             </div>
-            <div className="text-xl sm:text-2xl font-bold text-purple-600 px-4" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}>
+            <div className="text-2xl sm:text-3xl font-bold text-purple-600 px-4" style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}>
               {getMessage()}
             </div>
           </div>
@@ -513,7 +528,7 @@ export default function App() {
               playSound(clickSound);
               resetGame();
             }}
-            className="w-full max-w-md mx-auto bg-yellow-400 hover:bg-yellow-500 text-purple-900 font-black py-6 px-8 rounded-3xl text-2xl sm:text-3xl transform hover:scale-110 transition-all duration-200 shadow-2xl hover:shadow-yellow-400/50"
+            className="w-full max-w-md mx-auto bg-yellow-400 hover:bg-yellow-500 text-purple-900 font-black py-8 px-8 rounded-3xl text-3xl sm:text-4xl transform hover:scale-110 transition-all duration-200 shadow-2xl hover:shadow-yellow-400/50"
             style={{fontFamily: 'Comic Sans MS, cursive, sans-serif'}}
           >
             PLAY AGAIN! 🔄
